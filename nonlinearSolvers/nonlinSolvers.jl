@@ -1,5 +1,3 @@
-
-
 function doNothing()
     println("hiii")
 end
@@ -13,8 +11,8 @@ function bisection(func::Function, lowerLimit::Real, upperLimit::Real; ϵ::Abstr
         throw(ArgumentError("Lower limit should be less than the upper limit"))
     end
 
-    upperLimit₀ = upperLimit; # first upper limit
-    lowerLimit₀ = lowerLimit; # first lower limit
+    # upperLimit₀ = upperLimit; # first upper limit
+    # lowerLimit₀ = lowerLimit; # first lower limit
     n = 0; # number of maxIterations
     r = (upperLimit+lowerLimit)/2;
     while abs(upperLimit-lowerLimit) >= ϵ
