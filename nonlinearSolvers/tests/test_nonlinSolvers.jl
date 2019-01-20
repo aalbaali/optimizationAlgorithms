@@ -2,19 +2,26 @@ using Test
 include("..\\nonlinSolvers.jl");
 
 
-@testset "checkGradient" begin
-    @test checkGradient(x->x^2, x->2x,x=rand());
-    @test checkGradient(x->x^2, x->2x,x=rand()*10);
-    @test !checkGradient(x->x^2, x->2x+1,x=rand()*10);
-    @test !checkGradient(x->x^2, x->x+1,x=rand()*10);
+@testset "checkDerivative" begin
+    # check without hessian
+    @test checkDerivative(x->x^2, x->2x,x=rand());
+    @test checkDerivative(x->x^2, x->2x,x=rand()*10);
+    @test !checkDerivative(x->x^2, x->2x+1,x=rand()*10);
+    @test !checkDerivative(x->x^2, x->x+1,x=rand()*10);
+
+    # checking with hessian
+    f(x) = x[1]^2+x[1]*x[2]+x[2]^2+2;
+    ∇f(x) = [2x[1]+x[2]; 2x[2]+x[1]]; 
+    ∇²f(x) = [2 1;1 2];
+    @test checkDerivative(f,∇f,∇²f=∇²f,x=rand(2,1));
     
-    @test checkGradient(x->x[1]^2+x[2]^2, x->[2x[1], 2x[2]],x=rand(2,1));
-    @test !checkGradient(x->x[1]^2+2x[2]^2, x->[2x[1], 2x[2]],x=rand(2,1));
+    @test checkDerivative(x->x[1]^2+x[2]^2, x->[2x[1], 2x[2]],x=rand(2,1));
+    @test !checkDerivative(x->x[1]^2+2x[2]^2, x->[2x[1], 2x[2]],x=rand(2,1));
     
     f(x) = x[1]^2+2x[2]^2+3x[3]*x[2];
     ∇f(x) = [2x[1], 4x[2]+3x[3], 3x[2]];
-    @test checkGradient(f,∇f,x=rand(3,1));
-    @test !checkGradient(f,x-> ∇f(x)+[0,0,x[3]],x=rand(3,1)*10);
+    @test checkDerivative(f,∇f,x=rand(3,1));
+    @test !checkDerivative(f,x-> ∇f(x)+[0,0,x[3]],x=rand(3,1)*10);
 
 end
 

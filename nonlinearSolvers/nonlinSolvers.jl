@@ -143,7 +143,7 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
 end;
 
 
-function checkGradient(f::Function,∇f::Function; x::Union{Real,Array},t::AbstractFloat=1e-5)
+function checkDerivative(f::Function,∇f::Function; ∇²f::Union{Function,Nothing}=nothing, x::Union{Real,Array},t::AbstractFloat=1e-5)
     """ f: Rⁿ↦{true,false}. This function serves as a 'gradient check'. Give it the function and gradient and it will assess it.
     """
     if typeof(x) <: Array
@@ -153,8 +153,12 @@ function checkGradient(f::Function,∇f::Function; x::Union{Real,Array},t::Abstr
     end
     
     f_prime = (f(x+t*d)-f(x))/t;
-    return isapprox(f_prime, ∇f(x)'*d, atol=t*10)
-    
+
+    if ∇²f == nothing
+        return isapprox(f_prime, ∇f(x)'*d, atol=t*10);
+    else
+        return isapprox(f_prime, ∇f(x)'*d, atol=t*10) && checkDerivative(∇f,∇²f,x=x);
+    end
 end
 
 
@@ -169,7 +173,7 @@ function nonlinNewton(f::Function,∇f::Function, x₀::Union{Array,Real}; ϵ::A
         """
 
     # quick gradient check
-    if !checkGradient(f,∇f,x=x₀)
+    if !checkDerivative(f,∇f,x=x₀)
         throw(ArgumentError("Gradient function: ∇f(x) did not conform with the given function f(x)."))
     end
 
@@ -219,6 +223,9 @@ function nonlinNewton(f::Function,∇f::Function, x₀::Union{Array,Real}; ϵ::A
     end
     return x;
 end
+
+
+
 
 
 
