@@ -12,7 +12,7 @@ function bisection(func::Function, lowerLimit::Real, upperLimit::Real; ϵ::Abstr
     ϵ : |x_{n+1}-x_n| < ϵ
     ϵ_f: |f(x_{n+1})| < e_f (note that e_f shouldn't be much smaller than ϵ)
     """
-    
+
     if lowerLimit > upperLimit
         throw(ArgumentError("Lower limit should be less than the upper limit"))
     end
@@ -69,7 +69,7 @@ end;
 
 function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData::Bool = false,fileName::String="", fileDir::String="", maxIterations::Int = convert(Int,1e6))
     """ This function is designed to find the fixed points of a continuous function g(x) (i.e., find x s.t. g(x)=x.).
-
+    
     x₀: initial point
     ϵ (epsilon): solution tolerance (|x_actualSolution-x_founSolution|)
     exportData: user chooses whether to export data or not
@@ -77,15 +77,15 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
     fileDir: file driectory to store the .txt file (optional)
     
     Existence and uniqueness of a fixed-point:
-        1. If g∈C0[a: b] and g([a:b])⊂ [a:b], then g has at least one fixed point in [a:b]. i.e., the equation g(x)=x has at least one solution in [a:b].
-        2. Suppose, in addition, that g' exists on [a:b] such that |g'(x)|< 1, ∀ x ∈ [a:b], then there is exactly one fixed point in [a:b].
+    1. If g∈C0[a: b] and g([a:b])⊂ [a:b], then g has at least one fixed point in [a:b]. i.e., the equation g(x)=x has at least one solution in [a:b].
+    2. Suppose, in addition, that g' exists on [a:b] such that |g'(x)|< 1, ∀ x ∈ [a:b], then there is exactly one fixed point in [a:b].
     """
-
+    
     if exportData
         if fileDir == ""
             fileDir = "data\\";
         end
-
+        
         if fileName!=""
             fileName*="_";
         end
@@ -114,7 +114,7 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
             throw(ArgumentError("Function could not be evaluated"));
             # return NaN;
         end
-
+        
         if exportData
             write(fileHandle,"$n\t$x_new\t$x_old\n");
         end
@@ -127,8 +127,6 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
             x_new = NaN;
             break;
         end
-        
-        
     end
     
     # diff = abs(g(x_new)-x_new);
@@ -141,8 +139,86 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
         close(fileHandle);
     end
     return x_new;
-
+    
 end;
+
+
+function checkGradient(f::Function,∇f::Function; x::Union{Real,Array},t::AbstractFloat=1e-5)
+    """ f: Rⁿ↦{true,false}. This function serves as a 'gradient check'. Give it the function and gradient and it will assess it.
+    """
+    if typeof(x) <: Array
+        d = rand(size(x)[1]); # arbitrary direction of same size as x (given that x is a column array)
+    else
+        d = 1;
+    end
+    
+    f_prime = (f(x+t*d)-f(x))/t;
+    return isapprox(f_prime, ∇f(x)'*d, atol=t*10)
+    
+end
+
+
+function nonlinNewton(f::Function,∇f::Function, x₀::Union{Array,Real}; ϵ::AbstractFloat= 1e-5, maxIterations::Int = convert(Int,1e6), exportData::Bool = false,fileName::String="", fileDir::String="")
+    """ Newton's method to sove nonlinear equations.
+        Update scheme:
+                        x_{k+1} = x_k - inv(∇f(x_k))*f(x_k).
+        Instead of solving for inv(∇f(x_k)), the following will be used
+                            x_{k+1} = x_k + d_k.
+                where d_k is obtained by solving:
+                        ∇f(x_k)d_{k} = -F(x_k).
+        """
+
+    # quick gradient check
+    if !checkGradient(f,∇f,x=x₀)
+        throw(ArgumentError("Gradient function: ∇f(x) did not conform with the given function f(x)."))
+    end
+
+
+    # exporting data
+    if exportData
+        if fileDir == ""
+            fileDir = "data\\";
+        end
+        
+        if fileName!=""
+            fileName*="_";
+        end
+        
+        fileHandle = open(fileDir*"nonlinNewton_"*fileName*Dates.format(Dates.now(),"yyyymmddHHMM")*".txt","w");
+        write(fileHandle,"f(x): $f\t∇f(x): $∇f\tx_0:$x₀\tϵ:$ϵ\tϵ:$ϵ\tmaxIterations: $maxIterations\n");
+        write(fileHandle,"iterations\tx_new\tf(x_new)\t∇f(x_new)\td_new\t");
+    end
+    
+    n = 1; # iterations
+    x = x₀;
+    f_val = f(x);
+    ∇f_val = ∇f(x);
+    d = NaN;
+    while abs(f_val) >= ϵ
+        d = -∇f_val'\f_val; # solving for d
+        x += d;
+        n += 1;
+        f_val = f(x);
+        ∇f_val = ∇f(x);
+        
+        if exportData
+            write(fileHandle,"$n\t$x\t$f_val\t$∇f_val\t$d\n");
+        end
+        
+        # break if max iterations reached
+        if n == maxIterations
+            x = NaN;
+            break;
+        end
+        
+    end
+    
+    if exportData
+        write(fileHandle,"$n\t$x\t$f_val\t$∇f_val\t$d\n");
+        close(fileHandle);
+    end
+    return x;
+end
 
 
 
