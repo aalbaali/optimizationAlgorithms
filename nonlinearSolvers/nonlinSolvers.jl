@@ -155,7 +155,7 @@ function checkDerivative(f::Function,∇f::Function; ∇²f::Union{Function,Noth
     f_prime = (f(x+t*d)-f(x))/t;
 
     if ∇²f == nothing
-        return isapprox(f_prime, ∇f(x)'*d, atol=t*10);
+        return isapprox(f_prime, ∇f(x)'*d, atol=0.01);
     else
         return isapprox(f_prime, ∇f(x)'*d, atol=t*10) && checkDerivative(∇f,∇²f,x=x);
     end
@@ -164,21 +164,21 @@ end
 
 function nonlinNewton(f::Function,∇f::Function, x₀::Union{Array,Real}; ϵ::AbstractFloat= 1e-5, maxIterations::Int = convert(Int,1e6), exportData::Bool = false,fileName::String="", fileDir::String="")
     """ Newton's method to sove nonlinear equations.
-        Update scheme:
-                        x_{k+1} = x_k - inv(∇f(x_k))*f(x_k).
-        Instead of solving for inv(∇f(x_k)), the following will be used
+    Update scheme:
+    x_{k+1} = x_k - inv(∇f(x_k))*f(x_k).
+    Instead of solving for inv(∇f(x_k)), the following will be used
                             x_{k+1} = x_k + d_k.
                 where d_k is obtained by solving:
-                        ∇f(x_k)d_{k} = -F(x_k).
-        """
-
-    # quick gradient check
-    if !checkDerivative(f,∇f,x=x₀)
-        throw(ArgumentError("Gradient function: ∇f(x) did not conform with the given function f(x)."))
-    end
-
-
-    # exporting data
+                ∇f(x_k)d_{k} = -F(x_k).
+                """
+                
+                # quick gradient check
+                if !checkDerivative(f,∇f,x=x₀)
+                    throw(ArgumentError("Gradient function: ∇f(x) did not conform with the given function f(x)."))
+                end
+                
+                
+                # exporting data
     if exportData
         if fileDir == ""
             fileDir = "data\\";
@@ -190,7 +190,7 @@ function nonlinNewton(f::Function,∇f::Function, x₀::Union{Array,Real}; ϵ::A
         
         fileHandle = open(fileDir*"nonlinNewton_"*fileName*Dates.format(Dates.now(),"yyyymmddHHMM")*".txt","w");
         write(fileHandle,"f(x): $f\t∇f(x): $∇f\tx_0:$x₀\tϵ:$ϵ\tϵ:$ϵ\tmaxIterations: $maxIterations\n");
-        write(fileHandle,"iterations\tx_new\tf(x_new)\t∇f(x_new)\td_new\t");
+        write(fileHandle,"iterations\tx_new\tf(x_new)\t∇f(x_new)\td_new\n");
     end
     
     n = 1; # iterations
@@ -225,7 +225,68 @@ function nonlinNewton(f::Function,∇f::Function, x₀::Union{Array,Real}; ϵ::A
 end
 
 
+function secant(f::Function, x₀::Real=rand()*-10, x₁::Real=rand()*10; ϵ::AbstractFloat= 1e-5, maxIterations::Int = convert(Int,1e6), exportData::Bool = false,fileName::String="", fileDir::String="")
+    """
+    The secant method is designed to solve for the roots of a nonlinear equation f(x) = 0.
+    This method requires 2 intial conditions: x₀ and x₁.
 
+    """
+    if exportData
+        if fileDir == ""
+            fileDir = "data\\";
+        end
+        
+        if fileName!=""
+            fileName*="_";
+        end
+        
+        fileHandle = open(fileDir*"secant_"*fileName*Dates.format(Dates.now(),"yyyymmddHHMM")*".txt","w");
+        write(fileHandle,"f(x): $f\tr_l: $x₀\tr_r:$x₁\tϵ:$ϵ\tϵ:$ϵ\tmaxIterations: $maxIterations\n");
+        write(fileHandle,"iterations\tx_new\tf(x)\n");
+    end
+    
+    n = 1; # iterations
+    f₀ = f(x₀); # func valued at x₀
+    f₁ = f(x₁); # func valued at x₁
+    
+    updateIteration(f₀,f₁,r₀,r₁) = r₁ - f₁*(r₁-r₀)/(f₁-f₀);
+    x = updateIteration(f₀,f₁,x₀,x₁);   # x is the latest iteration
+    # while abs(x-x₀) >= ϵ
+    while abs(f₁-f₀) >= ϵ
+        
+        if exportData
+            write(fileHandle,"$n\t$x₁\t$f₁\n");
+        end
+        
+        x₀ = x₁;
+        x₁ = x;
+        f₀ = f(x₀);
+        f₁ = f(x₁);
+        x = updateIteration(f₀,f₁,x₀,x₁);   # x is the latest iteration
+        
+        # break if max iterations reached
+        if n == maxIterations
+            x = NaN;
+            println("hi")
+            break;
+        end
+
+        n+=1;
+        
+    end
+    
+    if exportData
+        write(fileHandle,"$n\t$x₁\t$f₁\n");
+        close(fileHandle);
+    end
+
+    if abs(f(x)) <= ϵ
+        return x;
+    else
+        return NaN;
+    end
+    
+end
 
 
 
