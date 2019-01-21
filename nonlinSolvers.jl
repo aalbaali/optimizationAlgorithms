@@ -1,7 +1,15 @@
 using Dates
+using Logging
+
+# logger = SimpleLogger(stdout, 0);
+# global_logger(logger);
 
 function doNothing()
-    println("hiii")
+    nothing
+    A = 3;
+    @debug "This is a function that does nothing! Debug!"
+    @info "This is a function that does nothing!" a=2 A
+    @error "Not really an error"
 end
 
 function bisection(func::Function, lowerLimit::Real, upperLimit::Real; ϵ::AbstractFloat= 1e-5, ϵ_f::AbstractFloat=1e-1, exportData::Bool = false,fileName::String="", fileDir::String="")
@@ -54,7 +62,6 @@ function bisection(func::Function, lowerLimit::Real, upperLimit::Real; ϵ::Abstr
     # checking whether the solution is close to the root or not
     f_r = func(r);
     if !isapprox(f_r, 0, atol=ϵ_f)
-        println("Found solution: r=$r.")
         r = NaN;
     end
     
@@ -129,11 +136,6 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
         end
     end
     
-    # diff = abs(g(x_new)-x_new);
-    # if diff > ϵ
-    #     println("g(xn)-xn: $diff");
-    # end
-    
     if exportData
         write(fileHandle,"$n\t$x_new\t$x_old\n");
         close(fileHandle);
@@ -141,25 +143,6 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
     return x_new;
     
 end;
-
-
-function checkDerivative(f::Function,∇f::Function; ∇²f::Union{Function,Nothing}=nothing, x::Union{Real,Array},t::AbstractFloat=1e-5)
-    """ f: Rⁿ↦{true,false}. This function serves as a 'gradient check'. Give it the function and gradient and it will assess it.
-    """
-    if typeof(x) <: Array
-        d = rand(size(x)[1]); # arbitrary direction of same size as x (given that x is a column array)
-    else
-        d = 1;
-    end
-    
-    f_prime = (f(x+t*d)-f(x))/t;
-
-    if ∇²f == nothing
-        return isapprox(f_prime, ∇f(x)'*d, atol=0.01);
-    else
-        return isapprox(f_prime, ∇f(x)'*d, atol=t*10) && checkDerivative(∇f,∇²f,x=x);
-    end
-end
 
 
 function nonlinNewton(f::Function,∇f::Function, x₀::Union{Array,Real}; ϵ::AbstractFloat= 1e-5, maxIterations::Int = convert(Int,1e6), exportData::Bool = false,fileName::String="", fileDir::String="")
@@ -267,7 +250,6 @@ function secant(f::Function, x₀::Real=rand()*-10, x₁::Real=rand()*10; ϵ::Ab
         # break if max iterations reached
         if n == maxIterations
             x = NaN;
-            println("hi")
             break;
         end
 
@@ -285,8 +267,29 @@ function secant(f::Function, x₀::Real=rand()*-10, x₁::Real=rand()*10; ϵ::Ab
     else
         return NaN;
     end
-    
+
 end
 
+function checkDerivative(f::Function,∇f::Function; ∇²f::Union{Function,Nothing}=nothing, x::Union{Real,Array},t::AbstractFloat=1e-5)
+    """ f: Rⁿ↦{true,false}. This function serves as a 'gradient check'. Give it the function and gradient and it will assess it.
+    """
 
+    if typeof(x) <: Array
+        d = rand(size(x)[1]); # arbitrary direction of same size as x (given that x is a column array)
+    else
+        d = 1;
+    end
+    
+    f_prime = (f(x+t*d)-f(x))/t;
 
+    if ∇²f == nothing
+        ans = isapprox(f_prime, ∇f(x)'*d, atol=0.01);
+        if !ans
+            @warn "∇f doesn't seem to be right";
+        end
+
+        return ans;
+    else
+        return isapprox(f_prime, ∇f(x)'*d, atol=t*10) && checkDerivative(∇f,∇²f,x=x);
+    end
+end
