@@ -14,6 +14,9 @@ This repository includes:
 
     2. Gradient method. `gradientMethod`. Special case of `globalLineSearch` where `getSearchDirection = (∇f, x) ↦ -∇f(x)`.
 
+    3. Step size functions:
+        1.  Armijo rule.
+
 
 The scripts are written in Julia programming language.
 
