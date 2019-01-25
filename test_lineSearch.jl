@@ -1,6 +1,7 @@
 using Test
 using Logging
 # logger = SimpleLogger(stdout, Logging.Debug)
+# logger = SimpleLogger(stdout, Logging.Warn)
 logger = SimpleLogger(stdout, Logging.Error)
 global_logger(logger);
 
@@ -65,4 +66,11 @@ end
     ∇f(x) = [2x[1];2(x[2]-1)];
     @test gradientMethod(f,∇f,[2.0,2.0],getStepSize=α, ϵ=1e-10) ≈ [0,1] atol=1e-10;
     
+end
+
+
+@testset "Armijo rule" begin
+    f(x) = x[1]^2+(x[2]-1)^2;
+    ∇f(x) = [2x[1];2(x[2]-1)];
+    @test gradientMethod(f,∇f,[2.0,2.0],getStepSize=armijoRule, ϵ=1e-10) ≈ [0,1] atol=1e-10;
 end

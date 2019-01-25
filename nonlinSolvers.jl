@@ -1,11 +1,11 @@
 using Dates
 using Logging
+using LinearAlgebra
 
 # logger = SimpleLogger(stdout, 0);
 # global_logger(logger);
 
 function doNothing()
-    nothing
     A = 3;
     @debug "This is a function that does nothing! Debug!"
     @info "This is a function that does nothing!" a=2 A
@@ -25,11 +25,16 @@ function bisection(func::Function, lowerLimit::Real, upperLimit::Real; ϵ::Abstr
         throw(ArgumentError("Lower limit should be less than the upper limit"))
     end
     
+    
     # export to a file if the user wants
     if exportData
         if fileDir == ""
             fileDir = "data\\";
         end
+        if fileName!=""
+            fileName*="_";
+        end
+        
         
         fileHandle = open(fileDir*"bisection_"*fileName*Dates.format(Dates.now(),"yyyymmddHHMM")*".txt","w");
         # fileHandle = open(fileDir*"bisection_"*fileName*Dates.format(Dates.now(),"yyyymmddHHMM")*".txt","w");
@@ -99,10 +104,10 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
         
         fileHandle = open(fileDir*"fixedPoint_"*fileName*Dates.format(Dates.now(),"yyyymmddHHMM")*".txt","w");
         write(fileHandle,"g(x): $g\tx_0:$x₀\tϵ:$ϵ\tϵ:$ϵ\tmaxIterations: $maxIterations\n");
-        write(fileHandle,"iterations\tx_new\tx_old\n");
+        write(fileHandle,"iterations\tx_new\tx_old\t\n");
     end
     
-    n = 1; # iterations
+    n = 0; # iterations
     x_old = x₀;
     
     x_new = NaN;
@@ -115,6 +120,10 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
     
     
     while abs(x_new-x_old) >= ϵ
+        if exportData
+            write(fileHandle,"$n\t$x_new\t$x_old\n");
+        end
+
         try
             x_new, x_old = g(x_new), x_new;
         catch
@@ -122,9 +131,6 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
             # return NaN;
         end
         
-        if exportData
-            write(fileHandle,"$n\t$x_new\t$x_old\n");
-        end
         
         n += 1;
         
@@ -145,7 +151,7 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
 end;
 
 
-function nonlinNewton(f::Function,∇f::Function, x₀::Union{Array,Real}; ϵ::AbstractFloat= 1e-5, maxIterations::Int = convert(Int,1e6), exportData::Bool = false,fileName::String="", fileDir::String="")
+function nonlinNewton(f::Function,∇f::Union{Function,Array}, x₀::Union{Array,Real}; ϵ::AbstractFloat= 1e-5, maxIterations::Int = convert(Int,1e6), exportData::Bool = false,fileName::String="", fileDir::String="")
     """ Newton's method to sove nonlinear equations.
     Update scheme:
     x_{k+1} = x_k - inv(∇f(x_k))*f(x_k).
@@ -162,6 +168,7 @@ function nonlinNewton(f::Function,∇f::Function, x₀::Union{Array,Real}; ϵ::A
                 
                 
                 # exporting data
+
     if exportData
         if fileDir == ""
             fileDir = "data\\";
@@ -176,24 +183,26 @@ function nonlinNewton(f::Function,∇f::Function, x₀::Union{Array,Real}; ϵ::A
         write(fileHandle,"iterations\tx_new\tf(x_new)\t∇f(x_new)\td_new\n");
     end
     
-    n = 1; # iterations
+    n = 0; # iterations
     x = x₀;
     f_val = f(x);
     ∇f_val = ∇f(x);
     d = NaN;
-    while abs(f_val) >= ϵ
+    while norm(f_val) >= ϵ
+        if exportData
+            write(fileHandle,"$n\t$x\t$f_val\t$∇f_val\t$d\n");
+        end
+
         d = -∇f_val'\f_val; # solving for d
         x += d;
         n += 1;
         f_val = f(x);
         ∇f_val = ∇f(x);
         
-        if exportData
-            write(fileHandle,"$n\t$x\t$f_val\t$∇f_val\t$d\n");
-        end
         
         # break if max iterations reached
         if n == maxIterations
+            @warn "Max iterations reached!"
             x = NaN;
             break;
         end
@@ -228,9 +237,14 @@ function secant(f::Function, x₀::Real=rand()*-10, x₁::Real=rand()*10; ϵ::Ab
         write(fileHandle,"iterations\tx_new\tf(x)\n");
     end
     
-    n = 1; # iterations
+    n = 0; # iterations
     f₀ = f(x₀); # func valued at x₀
     f₁ = f(x₁); # func valued at x₁
+    
+    if exportData
+        write(fileHandle,"$n\t$x₀\t$f₀\n");
+        write(fileHandle,"$n\t$x₁\t$f₁\n");
+    end
     
     updateIteration(f₀,f₁,r₀,r₁) = r₁ - f₁*(r₁-r₀)/(f₁-f₀);
     x = updateIteration(f₀,f₁,x₀,x₁);   # x is the latest iteration

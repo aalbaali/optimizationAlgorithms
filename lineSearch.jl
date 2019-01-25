@@ -73,21 +73,27 @@ function generalLineSearch(f::Function, ∇f::Function, x₀=1; getSearchDirecti
     f_val = f(x);
     ∇f_val = ∇f(x);
     d = NaN;
+    α = NaN;
 
+
+    @debug "Before entering the loop: " x, f_val, ∇f_val, d
     while norm(∇f_val) >= ϵ
         if exportData
-            write(fileHandle,"$n\t$x\t$f\t$(∇f_val)\n"); # adjust
+            write(fileHandle,"$n\t$x\t$f_val\t$(∇f_val)\n"); # adjust
         end
         
         d = getSearchDirection(∇f,x);
         α = getAlpha(f,∇f,x,d);
-        
+        xold = x;
         x += α*d;
+
+        xnew=x;
         n += 1;
-
-        f_val = f(x);
-        ∇f_val = ∇f(x);
-
+        
+        
+        @debug "INSIDE loop" n, xold,f_val,∇f_val, α, d, xnew
+        
+        
         if n == maxIterations
             @warn "Maximum iterations reached"
             @debug "n: $n. x: $x. ∇f_val: $(∇f_val). d: $d. α: $α"
@@ -95,15 +101,20 @@ function generalLineSearch(f::Function, ∇f::Function, x₀=1; getSearchDirecti
             break;
         end
         
+        
+        f_val = f(x);
+        ∇f_val = ∇f(x);
     end
+    @debug "After exiting the loop" x,f_val,∇f_val, α, d, n
     
     # checking whether the solution is close to the root or not
     if !isapprox(norm(∇f_val), 0, atol=ϵ)
+        @warn "norm(∇f_val) > ϵ" n, x, ∇f_val
         x = NaN;
     end
     
     if exportData
-        write(fileHandle,"$n\t$x\t$f\t$(∇f_val)\n"); # adjust
+        write(fileHandle,"$n\t$x\t$f_val\t$(∇f_val)\n"); # adjust
         close(fileHandle);
     end
     return x; # adjust 
@@ -112,7 +123,7 @@ end
 
 
 
-
+# change name to steepest descent
 function gradientMethod(f::Function,∇f::Function, x₀::Union{Real,Array}; ϵ::AbstractFloat= 1e-5, maxIterations::Real=1e6,getStepSize::Union{Nothing,Real,Function}=nothing, exportData::Bool = false,fileName::String="", fileDir::String="")
     """
     This function tries to find the stationary of a function using the gradient method.
@@ -142,3 +153,41 @@ function gradientMethod(f::Function,∇f::Function, x₀::Union{Real,Array}; ϵ:
 end
 
 
+function armijoRule(f::Function,∇f::Function,x::Union{Real,Array},d::Union{Array,Real}; β::Real=0.5, σ::Real=1e-4)
+    ∇f_val = ∇f(x);
+    return armijoRule(f,∇f_val,x,d; β=β, σ=σ);
+end
+
+function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array},d::Union{Array,Real}; β::Real=0.5, σ::Real=1e-4)
+    """
+    The Armijo rule is a function that gives a step length α for a given x value for a given d (given that  ∇f(x)ᵀd < 0).
+    
+        α = max_{l∈N₀} {βˡ s.t. f(x+βˡd) <= f(x) + βˡσ∇f(x)ᵀd }.
+        Which is equivalent to finding the minimum l (integer)
+    f: Rⁿ↦ R. (Function)
+    ∇f_val ∈ Rⁿ (gradient evaluated at x).
+    x ∈ Rⁿ
+    d ∈ Rⁿ
+    β,σ ∈ (0,1) ⊂ R
+    """
+    @debug "Before anything" ∇f_val,x,d,β,σ
+
+    # making sure that the variables are within the bounds
+    if β <= 0 || β >=1
+        throw(ArgumentError("β should be in the range (0,1)"))
+    elseif σ <= 0 || σ >= 1
+        throw(ArgumentError("σ should be in the range (0,1)"))
+    end
+
+    if  ∇f_val'*d >= 0
+        throw(ArgumentError("Arguments do NOT satisfy the condition: ∇f_val'*d >= 0."))
+    end
+
+    
+    l = 0;  # output is α:=βˡ
+    f_val = f(x);
+    while (f(x+(β^l)*d)>f_val+(β^l)*σ* ∇f_val'*d)
+        l = l+1;
+    end
+    α = β^l;
+end

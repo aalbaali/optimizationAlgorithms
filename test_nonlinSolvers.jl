@@ -37,7 +37,7 @@ end
     # export data
     #  @test bisection(x->(x-1)*(x+3),0,5,ϵ=1e-15,exportData=true) ≈ 1 atol=1e-15;
     #  @test bisection(x->(x-1)*(x+3),0,5,ϵ=1e-15,exportData=true,fileName="test1") ≈ 1 atol=1e-15;
-    @test bisection(x->(x-1)*(x+3),0,5,ϵ=1e-15,exportData=true,fileName="test2",fileDir = "C:\\Users\\albaa\\Google Drive\\McGill OneDrive\\McGill\\Courses\\13_WINTER 2019\\MECH 579\\Code2\\Julia\\data\\") ≈ 1 atol=1e-15;
+    # @test bisection(x->(x-1)*(x+3),0,5,ϵ=1e-15,exportData=true,fileName="test2",fileDir = "C:\\Users\\albaa\\Google Drive\\McGill OneDrive\\McGill\\Courses\\13_WINTER 2019\\MECH 579\\Code2\\Julia\\data\\") ≈ 1 atol=1e-15;
     try
         # test new directory
         # create new directory if not there already
@@ -82,7 +82,7 @@ end;
     
     # no solutions
     @test isnan(fixedPoint(x->1/x,5,maxIterations=1000));
-    @test isnan(fixedPoint(x->1/x,5,maxIterations=convert(Int,1e6),exportData=true));
+    # @test isnan(fixedPoint(x->1/x,5,maxIterations=convert(Int,1e6),exportData=true));
     
     
     # Exeptions
@@ -90,7 +90,7 @@ end;
     
 end
 
-
+# add a test of a system of eqns
 @testset "Nonlin Newton method" begin
     # without exporting
     f₁(x) = x^2+2x+1; # ans: -1
