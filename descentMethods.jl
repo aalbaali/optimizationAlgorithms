@@ -149,16 +149,30 @@ function gradientMethod(f::Function,∇f::Function, x₀::Union{Real,Array}; ϵ:
         getAlpha = getStepSize;  # assign method/function
     end
 
-    ans = generalLineSearchDescent(f,∇f,x₀, getSearchDirection = getDirection, getStepSize = getAlpha, ϵ = ϵ, maxIterations = maxIterations, exportData=exportData,fileName="gradient_"*fileName,fileDir=fileDir);
-
-    return ans;
+    return generalLineSearchDescent(f,∇f,x₀, getSearchDirection = getDirection, getStepSize = getAlpha, ϵ = ϵ, maxIterations = maxIterations, exportData=exportData,fileName="gradient_"*fileName,fileDir=fileDir);
 
 end
 
 
+function exactNewton(f::Function,∇f::Function, ∇²f::Union{Matrix,Function}, x₀::Union{Real,Array}; ϵ::AbstractFloat= 1e-5, maxIterations::Int=convert(Int,1e6),getStepSize::Union{Nothing,Real,Function}=nothing, exportData::Bool = false,fileName::String="", fileDir::String="")
+    """ 
+    This function tries to find the stationary of a function using the Newton method.
+        It simply uses the 
+        The search direction is 
+        dₖ =  -inv(∇²f)∇f(xₖ) 
+        which is done by solving the system
+            ∇²f(xₖ)*dₖ=∇f(xₖ)
+        
+        This method uses Newton only which may not converge! Use the globalNewton for guaranteed convergence (it uses the gradient method in conjuction with it)
+    """
 
-function exactNewton()
+    fileName = "OptimNewton_"*fileName; 
+    # use the Newton's method for solving nonlinear equations. The objective function in this case is the gradient.
+    return nonlinNewton(∇f, ∇²f, x₀, ϵ=ϵ, maxIterations=maxIterations, exportData=exportData,fileName=fileName, fileDir=fileDir);
 end
+
+
+
 
 function quasiNewton()
     """ General inexact Newton method. The Hessian update function must be passed
