@@ -176,19 +176,19 @@ end
         
 
 
-    function quasiNewton(f::Function,∇f::Function, x₀::Union{Real,Array};H₀= nothing, updateH::Function, ϵ::AbstractFloat= 1e-5, maxIterations::Real=1e6, exportData::Bool = false,fileName::String="", fileDir::String="")
-        """ General inexact Newton method. The Hessian update function must be passed (it's passed from BFGS, or DFP) in the form updateH(H,s,y)
-        """
-        if typeof(x₀) != typeof(H₀*x₀)
-            @warn "x₀ ($(typeof(x₀))) is not the same type as H₀*x₀ ($(typeof(H₀*x₀)))"
-        end
-        
-        @debug "Before anything" H₀
+function quasiNewton(f::Function,∇f::Function, x₀::Union{Real,Array};H₀= nothing, updateH::Function, ϵ::AbstractFloat= 1e-5, maxIterations::Real=1e6, exportData::Bool = false,fileName::String="", fileDir::String="")
+    """ General inexact Newton method. The Hessian update function must be passed (it's passed from BFGS, or DFP) in the form updateH(H,s,y)
+    """
+    if typeof(x₀) != typeof(H₀*x₀)
+        @warn "x₀ ($(typeof(x₀))) is not the same type as H₀*x₀ ($(typeof(H₀*x₀)))"
+    end
+    
+    @debug "Before anything" H₀
 
-        # H₀ must be positve definite
-        if !isposdef(H₀)
-            throw(ArgumentError("H₀='$H₀' is NOT positive definite"))
-        end
+    # H₀ must be positve definite
+    if !isposdef(H₀)
+        throw(ArgumentError("H₀='$H₀' is NOT positive definite"))
+    end
 
     #initialize H₀ if not given
     if H₀ == nothing
@@ -210,7 +210,7 @@ end
 
         fileHandle = open(fileDir*"quasiNewton_"*fileName*Dates.format(Dates.now(),"yyyymmddHHMM")*".txt","w");
         write(fileHandle,"ϵ:$ϵ\n");
-        write(fileHandle,"iterations\tx\tf(x)\t∇f(x)\tH\n");
+        write(fileHandle,"iterations\tx\tf(x)\t∇f(x)\t||∇f(x)||\tH\n");
     end
 
         x_old = x₀;
@@ -224,7 +224,7 @@ end
 
         while (norm(∇fVal_old)>ϵ) 
             if exportData
-                write(fileHandle,"$k\t$x_old\t$fVal_old\t$(∇fVal_old)\t$H\n"); # adjust
+                write(fileHandle,"$k\t$x_old\t$fVal_old\t$(∇fVal_old)\t$(norm(∇fVal_old))\t$H\n"); # adjust
             end
             
             @debug "Inside while loop: before anything " H ∇fVal_old
@@ -242,12 +242,18 @@ end
             y = ∇fVal_new - ∇fVal_old;
             @debug "Before updating H" H, s, y
             
-            H = updateH(H,s,y);
+            H = updateH(H,s,y); # update H using one of the well-defined schemes (BFGS, DFP, etc)
             @debug "Inside while loop: got H: " H
             
             x_old = x_new;
             ∇fVal_old = ∇fVal_new;
             k = k+1;
+            
+            if k == maxIterations
+                @warn "Max iterations ($maxIterations) reached"
+                x_old = NaN;
+                break;
+            end
             
         end
         
@@ -255,16 +261,22 @@ end
             write(fileHandle,"$k\t$x_old\t$fVal_old\t$(∇fVal_old)\t$H\n"); # adjust
             close(fileHandle);
         end
-
         return x_old
-    end
+end
     
-    function quasiNewtonBFGS()
-        """ Uses the general quasiNewton scheme"""
-    end
-    
-    function quasiNewtonDFP()
-        """ Uses the general quasiNewton scheme"""
+function quasiNewtonBFGS(f::Function,∇f::Function, x₀::Union{Real,Array};H₀= nothing, ϵ::AbstractFloat= 1e-5, maxIterations::Real=1e6, exportData::Bool = false,fileName::String="", fileDir::String="")
+    """ Uses the general quasiNewton scheme"""
+    updateH(H,s,y) = H + (y*y')/(y'*s)-(H*s*s'*H)/(s'*H*s); # BFGS update
+    fileName = "BFGS_"*fileName;
+    ans = quasiNewton(f,∇f, x₀;H₀= H₀, updateH=updateH, ϵ=ϵ, maxIterations=maxIterations, exportData=exportData,fileName=fileName, fileDir=fileDir);
+    return ans;
+end
+function quasiNewtonDFP(f::Function,∇f::Function, x₀::Union{Real,Array};H₀= nothing, ϵ::AbstractFloat= 1e-5, maxIterations::Real=1e6, exportData::Bool = false,fileName::String="", fileDir::String="")
+    """ Uses the general quasiNewton scheme"""
+    updateH(H,s,y) = H + ((y-H*s)*y'+y*(y-H*s)')/(s'*H*s)-(y-H*s)'*s/((y'*s)^2)*y*y'; # DFP update
+    fileName = "DFP_"*fileName;
+    ans = quasiNewton(f,∇f, x₀;H₀= H₀, updateH=updateH, ϵ=ϵ, maxIterations=maxIterations, exportData=exportData,fileName=fileName, fileDir=fileDir);
+    return ans;
 end
 
 function generalCG()
