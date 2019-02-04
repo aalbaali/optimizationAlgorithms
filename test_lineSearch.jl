@@ -25,4 +25,16 @@ end
     d = -∇f(x);
     α = Wolfe_Powell_rule(f,∇f,x,d, ρ=0.5);
     @test f(x+α*d) < f(x)
+    
+    f(x) = 2*(x.-1).^2+3;
+    ∇f(x) = 4*(x-1);
+    x = rand()*10;
+    d = -∇f(x);
+    α = Wolfe_Powell_rule(f,∇f,x,d, ρ=0.5);
+    @test f(x+α*d) < f(x)
+    
+    # x = rand()*10;
+    # d = [-∇f(x)];
+    # α = Wolfe_Powell_rule(f,∇f,x,d, ρ=0.5);
+    # @test f(x+α*d) < f(x);
 end

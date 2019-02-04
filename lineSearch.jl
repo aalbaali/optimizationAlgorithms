@@ -54,7 +54,7 @@ function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array}
     #     return Wolfe_Powell_rule(f,∇f,x,d, α₀=α₀, γ=γ, ρ=ρ, σ=σ);
     # end
 
-    function Wolfe_Powell_rule(f::Function, ∇f::Function, x::Union{Vector,Array}, d::Union{Vector,Array}; α₀::Real=1, γ::Real=2, ρ::Real=0.9, σ::Real=1e-4, ϵ::Real=1e-5)
+    function Wolfe_Powell_rule(f::Function, ∇f::Function, x::Union{Real,Vector, Array}, d::Union{Real, Vector, Array}; α₀::Real=1, γ::Real=2, ρ::Real=0.9, σ::Real=1e-4, ϵ::Real=1e-5)
         
         if σ <= 0 || σ >= 0.5
             throw(ArgumentError("σ '$σ' should be in the range (0,1)"))
@@ -65,7 +65,13 @@ function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array}
         elseif γ <=1
             throw(ArgumentError("γ '$γ' should be > 1"))
         end
-    
+
+
+
+    if typeof(x) != typeof(d)
+        @warn "typeof(x) ($(typeof(x))) != typeof(d) ($(typeof(d)))"
+    end
+
     α = NaN;
 
     if  ∇f(x)'*d >= 0
