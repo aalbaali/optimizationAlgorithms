@@ -104,7 +104,7 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
         
         fileHandle = open(fileDir*"fixedPoint_"*fileName*Dates.format(Dates.now(),"yyyymmddHHMM")*".txt","w");
         write(fileHandle,"g(x): $g\tx_0:$x₀\tϵ:$ϵ\tϵ:$ϵ\tmaxIterations: $maxIterations\n");
-        write(fileHandle,"iterations\tx_new\tx_old\t\n");
+        write(fileHandle,"iterations\tx_old\tx_new\t\n");
     end
     
     n = 0; # iterations
@@ -121,7 +121,7 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
     
     while abs(x_new-x_old) >= ϵ
         if exportData
-            write(fileHandle,"$n\t$x_new\t$x_old\n");
+            write(fileHandle,"$n\t$x_old\t$x_new\n");
         end
 
         try
@@ -143,7 +143,7 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
     end
     
     if exportData
-        write(fileHandle,"$n\t$x_new\t$x_old\n");
+        write(fileHandle,"$n\t$x_old\t$x_new\n");
         close(fileHandle);
     end
     return x_new;
@@ -296,11 +296,12 @@ function checkDerivative(f::Function,∇f::Function; ∇²f::Union{Function,Noth
     
     f_prime = (f(x+t*d)-f(x))/t;
 
+    # if Hessian is empty, then don't check for it (simply check the function and its gradient)
     if ∇²f == nothing
         ans = isapprox(f_prime, ∇f(x)'*d, atol=0.01);
-        if !ans
-            @warn "∇f doesn't seem to be right";
-        end
+        # if !ans
+        #     @warn "∇f doesn't seem to be right";
+        # end
 
         return ans;
     else
