@@ -130,9 +130,9 @@ function gradientMethod(f::Function,∇f::Function, x₀::Union{Real,Array}; ϵ:
     """
     This function tries to find the stationary of a function using the gradient method.
     The search direction is 
-                dₖ =  -∇f(xₖ).
+    dₖ =  -∇f(xₖ).
     The current default step length is
-                α = 1.
+    α = 1.
     getStepSize: f,∇f,x,d ↦ α. A constant or a function/mapping that takes the objective function and its gradient, and outputs a step-size (could be the Armijo rule or some other method)
     """
     @debug "type of x₀: $(typeof(x₀))";
@@ -148,12 +148,12 @@ function gradientMethod(f::Function,∇f::Function, x₀::Union{Real,Array}; ϵ:
         @debug "Keeping the same function."
         getAlpha = getStepSize;  # assign method/function
     end
-
+    
     return generalLineSearchDescent(f,∇f,x₀, getSearchDirection = getDirection, getStepSize = getAlpha, ϵ = ϵ, maxIterations = maxIterations, exportData=exportData,fileName="gradient_"*fileName,fileDir=fileDir);
-
+    
 end
-
-
+    
+    
 function exactNewton(f::Function,∇f::Function, ∇²f::Union{Matrix,Function}, x₀::Union{Real,Array}; ϵ::AbstractFloat= 1e-5, maxIterations::Int=convert(Int,1e6),getStepSize::Union{Nothing,Real,Function}=nothing, exportData::Bool = false,fileName::String="", fileDir::String="")
     """ 
     This function tries to find the stationary of a function using the Newton method.
@@ -161,30 +161,110 @@ function exactNewton(f::Function,∇f::Function, ∇²f::Union{Matrix,Function},
         The search direction is 
         dₖ =  -inv(∇²f)∇f(xₖ) 
         which is done by solving the system
-            ∇²f(xₖ)*dₖ=∇f(xₖ)
+        ∇²f(xₖ)*dₖ=∇f(xₖ)
         
         This method uses Newton only which may not converge! Use the globalNewton for guaranteed convergence (it uses the gradient method in conjuction with it)
-    """
-
-    fileName = "OptimNewton_"*fileName; 
-    # use the Newton's method for solving nonlinear equations. The objective function in this case is the gradient.
-    return nonlinNewton(∇f, ∇²f, x₀, ϵ=ϵ, maxIterations=maxIterations, exportData=exportData,fileName=fileName, fileDir=fileDir);
+        """
+        
+        fileName = "OptimNewton_"*fileName; 
+        # use the Newton's method for solving nonlinear equations. The objective function in this case is the gradient.
+        return nonlinNewton(∇f, ∇²f, x₀, ϵ=ϵ, maxIterations=maxIterations, exportData=exportData,fileName=fileName, fileDir=fileDir);
 end
+        
+        
+        
+        
 
 
+    function quasiNewton(f::Function,∇f::Function, x₀::Union{Real,Array};H₀= nothing, updateH::Function, ϵ::AbstractFloat= 1e-5, maxIterations::Real=1e6, exportData::Bool = false,fileName::String="", fileDir::String="")
+        """ General inexact Newton method. The Hessian update function must be passed (it's passed from BFGS, or DFP) in the form updateH(H,s,y)
+        """
+        if typeof(x₀) != typeof(H₀*x₀)
+            @warn "x₀ ($(typeof(x₀))) is not the same type as H₀*x₀ ($(typeof(H₀*x₀)))"
+        end
+        
+        @debug "Before anything" H₀
 
+        # H₀ must be positve definite
+        if !isposdef(H₀)
+            throw(ArgumentError("H₀='$H₀' is NOT positive definite"))
+        end
 
-function quasiNewton()
-    """ General inexact Newton method. The Hessian update function must be passed
-    """
-end
+    #initialize H₀ if not given
+    if H₀ == nothing
+        if typeof(x₀) <: Array
+            H₀ = Matrix{Float64}(I, length(x₀), length(x₀));
+        else
+            H₀ = 1; # if typeof(x) <: Real, then H₀ must be real as well (it shouldn't be a matrix)
+        end
+    end
 
-function quasiNewtonBFGS()
-    """ Uses the general quasiNewton scheme"""
-end
+        # export to a file if the user wants
+    if exportData
+        if fileDir == ""
+            fileDir = "data\\";
+        end
+        if fileName != ""
+            fileName *= "_"
+        end
 
-function quasiNewtonDFP()
-    """ Uses the general quasiNewton scheme"""
+        fileHandle = open(fileDir*"quasiNewton_"*fileName*Dates.format(Dates.now(),"yyyymmddHHMM")*".txt","w");
+        write(fileHandle,"ϵ:$ϵ\n");
+        write(fileHandle,"iterations\tx\tf(x)\t∇f(x)\tH\n");
+    end
+
+        x_old = x₀;
+        fVal_old = f(x_old);
+        ∇fVal_old = ∇f(x_old);
+        H = H₀;
+        k = 0;
+        
+
+        @debug "Before while loop" 
+
+        while (norm(∇fVal_old)>ϵ) 
+            if exportData
+                write(fileHandle,"$k\t$x_old\t$fVal_old\t$(∇fVal_old)\t$H\n"); # adjust
+            end
+            
+            @debug "Inside while loop: before anything " H ∇fVal_old
+            d = -H\∇fVal_old; 
+            
+            @debug "Inside while loop: got direction: " d
+            α = Wolfe_Powell_rule(f,∇f,x_old, d);
+            # α = Wolfe_Powell_rule(f,∇f,x_old, d, α₀=1, γ=2, ρ=0.9, σ=1e-4);
+            @debug "Inside while loop: got step length: " α
+            
+            x_new = x_old + α*d;
+            s = x_new - x_old;    
+            fVal_new = f(x_new);
+            ∇fVal_new = ∇f(x_new);
+            y = ∇fVal_new - ∇fVal_old;
+            @debug "Before updating H" H, s, y
+            
+            H = updateH(H,s,y);
+            @debug "Inside while loop: got H: " H
+            
+            x_old = x_new;
+            ∇fVal_old = ∇fVal_new;
+            k = k+1;
+            
+        end
+        
+        if exportData
+            write(fileHandle,"$k\t$x_old\t$fVal_old\t$(∇fVal_old)\t$H\n"); # adjust
+            close(fileHandle);
+        end
+
+        return x_old
+    end
+    
+    function quasiNewtonBFGS()
+        """ Uses the general quasiNewton scheme"""
+    end
+    
+    function quasiNewtonDFP()
+        """ Uses the general quasiNewton scheme"""
 end
 
 function generalCG()
