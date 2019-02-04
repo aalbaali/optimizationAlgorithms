@@ -137,13 +137,14 @@ function gradientMethod(f::Function,∇f::Function, x₀::Union{Real,Array}; ϵ:
     getDirection(∇f::Function, x) = -∇f(x); # gradient method (B=I)
     
     if getStepSize == nothing
-        getAlpha(f,∇f,x,d) = 1; # adjust it later to make it armijo rule
+        # getAlpha(f,∇f,x,d) = 1; # adjust it later to make it armijo rule
+        getAlpha(f,∇f,x,d) = (f,∇f,x,d)->armijoRule(f,∇f,x,d); # let Armijo rule be the default
         # else if it's not a funcion , then it's a REAl number
     elseif (typeof(getStepSize) <: Real)
         getAlpha = (f,∇f,x,d) -> getStepSize; 
     else
         @debug "Keeping the same function."
-        getAlpha = getStepSize;  # assign method
+        getAlpha = getStepSize;  # assign method/function
     end
 
     ans = generalLineSearch(f,∇f,x₀, getSearchDirection = getDirection, getStepSize = getAlpha, ϵ = ϵ, maxIterations = maxIterations, exportData=exportData,fileName="gradient_"*fileName,fileDir=fileDir);
@@ -152,15 +153,17 @@ function gradientMethod(f::Function,∇f::Function, x₀::Union{Real,Array}; ϵ:
 
 end
 
-
+# method 2: If ∇f is given as a function, then evaluate it at 'x' and pass the value to Amrijo method 1.
 function armijoRule(f::Function,∇f::Function,x::Union{Real,Array},d::Union{Array,Real}; β::Real=0.5, σ::Real=1e-4)
     ∇f_val = ∇f(x);
     return armijoRule(f,∇f_val,x,d; β=β, σ=σ);
 end
 
+# Armijo method 1.
 function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array},d::Union{Array,Real}; β::Real=0.5, σ::Real=1e-4)
     """
-    The Armijo rule is a function that gives a step length α for a given x value for a given d (given that  ∇f(x)ᵀd < 0).
+    The Armijo rule is a function that gives a step length α for a given x value for a given d (given that  ∇f(x)ᵀd < 0). 
+    It's a backtracking approach.
     
         α = max_{l∈N₀} {βˡ s.t. f(x+βˡd) <= f(x) + βˡσ∇f(x)ᵀd }.
         Which is equivalent to finding the minimum l (integer)
@@ -191,3 +194,39 @@ function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array}
     end
     α = β^l;
 end
+
+
+
+function exactNewton()
+end
+
+function quasiNewton()
+    """ General inexact Newton method. The Hessian update function must be passed
+    """
+end
+
+function quasiNewtonBFGS()
+    """ Uses the general quasiNewton scheme"""
+end
+
+function quasiNewtonDFP()
+    """ Uses the general quasiNewton scheme"""
+end
+
+function generalCG()
+    """ General inexact conjugate gradient method. The Hessian update function must be passed
+    """
+end
+
+function cgFR()
+    """Fletcher-Reeves method. Uses the general conjugate gradient scheme (generalCG)"""
+end
+
+function cgHS()
+    """ Hestenes-Stiefel method. Uses the general conjugate gradient scheme (generalCG)"""
+end
+
+function cgPR()
+    """ Polak-Rebiere method. Uses the general conjugate gradient scheme (generalCG)"""
+end
+
