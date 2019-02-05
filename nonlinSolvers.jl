@@ -74,6 +74,8 @@ function bisection(func::Function, lowerLimit::Real, upperLimit::Real; ϵ::Abstr
         write(fileHandle,"$n\t$r\t$f_r\n")
         close(fileHandle);
     end
+
+    @info r, n, func(r)
     return r;
     
 end;
@@ -146,6 +148,8 @@ function fixedPoint(g::Function, x₀::Real; ϵ::AbstractFloat= 1e-5, exportData
         write(fileHandle,"$n\t$x_old\t$x_new\n");
         close(fileHandle);
     end
+    
+    @info x_new, n, g(x_new)
     return x_new;
     
 end;
@@ -213,6 +217,7 @@ function nonlinNewton(f::Function,∇f::Union{Function,Array}, x₀::Union{Array
         write(fileHandle,"$n\t$x\t$f_val\t$∇f_val\t$d\n");
         close(fileHandle);
     end
+    @info x, n, ∇f(x), f(x)
     return x;
 end
 
@@ -276,6 +281,7 @@ function secant(f::Function, x₀::Real=rand()*-10, x₁::Real=rand()*10; ϵ::Ab
         close(fileHandle);
     end
 
+    @info x, n, ∇f(x), f(x)
     if abs(f(x)) <= ϵ
         return x;
     else
@@ -298,7 +304,7 @@ function checkDerivative(f::Function,∇f::Function; ∇²f::Union{Function,Noth
 
     # if Hessian is empty, then don't check for it (simply check the function and its gradient)
     if ∇²f == nothing
-        ans = isapprox(f_prime, ∇f(x)'*d, atol=0.01);
+        ans = isapprox(f_prime, ∇f(x)'*d, atol=0.1);
         # if !ans
         #     @warn "∇f doesn't seem to be right";
         # end
