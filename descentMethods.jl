@@ -279,9 +279,89 @@ function quasiNewtonDFP(f::Function,∇f::Function, x₀::Union{Real,Array};H₀
     return ans;
 end
 
-function generalCG()
+function generalCG(f::Function,∇f::Function, x₀::Union{Real, Array, Vector}; updateα::Union{Nothing,Real,Function}=Wolfe_Powell_rule, updateβ::Function, d₀::Union{Real,Array}=-∇f(x₀), ϵ::AbstractFloat= 1e-5, maxIterations::Real=1e6, exportData::Bool = false,fileName::String="", fileDir::String="")
     """ General inexact conjugate gradient method. The Hessian update function must be passed
+            updateB(∇f_old,∇f_new) 
     """
+
+
+    # export to a file if the user wants
+    if exportData
+        if fileDir == ""
+            fileDir = "data\\";
+        end
+        
+        fileHandle = open(fileDir*"generalCG_"*fileName*Dates.format(Dates.now(),"yyyymmddHHMM")*".txt","w");
+        write(fileHandle,"ϵ:$ϵ\n");
+        write(fileHandle,"iterations\tx\tf(x)\t∇f(x)\t||∇f(x)||\n");
+    end
+    
+    # quick gradient check
+    xₜ = NaN; # point to test derivative at.
+    if typeof(x₀) <: Array
+        xₜ = rand(length(x₀),1)*10;
+    else
+        xₜ = rand()*10;  
+    end
+    # derivative check
+    if !checkDerivative(f,∇f, x=xₜ)
+        @warn "∇f doesn't seem to be right";
+    end
+    
+    n = 0; # number of maxIterations
+    x_old = x₀;
+    f_old = f(x_old);
+    ∇f_old = ∇f(x_old);
+    
+    d = d₀;
+    α = NaN;
+
+
+    @debug "Before entering the loop: " x_old, f_old, ∇f_old, d
+
+    while norm(∇f_old) >= ϵ
+        if exportData
+            write(fileHandle,"$n\t$x_old\t$f_old\t$(∇f_old)\t$(norm(∇f_old))\n"); # adjust
+        end
+        
+        α = updateα(f,∇f,x_old,d);
+        x_new = x_old + α*d;
+        ∇f_new = ∇f(x_new);
+        β = updateβ(∇f_old,∇f_new);
+        d = -∇f_new+β*d;
+        
+        x_old = x_new;
+        ∇f_old = ∇f_new;
+        
+        
+        @debug "INSIDE loop" n, x_old,f_val,∇f_val, α, d
+        
+        
+        if n == maxIterations
+            @warn "Maximum iterations reached"
+            @debug "n: $n. x: $x. ∇f_val: $(∇f_val). d: $d. α: $α"
+            x = NaN;
+            break;
+        end
+        
+        
+        f_old = f(x_old);
+    end
+    
+    # checking whether the solution is close to the root or not
+    if !isapprox(norm(∇f_old), 0, atol=ϵ)
+        @warn "norm(∇f_val) > ϵ" n, x_old, ∇f_val
+        x_old = NaN;
+    end
+    
+    if exportData
+        write(fileHandle,"$n\t$x_old\t$f_old\t$(∇f_old)\t$(norm(∇f_old))\n"); # adjust
+        close(fileHandle);
+    end
+    return x_old; # adjust 
+
+
+
 end
 
 function cgFR()

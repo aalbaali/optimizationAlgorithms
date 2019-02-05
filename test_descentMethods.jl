@@ -73,45 +73,56 @@ f_global(x) = x[1]^2+(x[2]-1)^2;
 # end
 
 
-@testset "exactNewton" begin
-    f(x) = (x-2)^2-1;
-    ∇f(x) = 2(x-2);
-    ∇²f(x) = 2;
+# @testset "exactNewton" begin
+#     f(x) = (x-2)^2-1;
+#     ∇f(x) = 2(x-2);
+#     ∇²f(x) = 2;
 
-    x₀ = 1;
+#     x₀ = 1;
 
-    @test norm(∇f(exactNewton(f,∇f, ∇²f, x₀))) ≈ 0 atol=0.001;
-    @test norm(∇f_global(exactNewton(f_global,∇f_global, ∇²f_global, [1,2]))) ≈ 0 atol=0.001;
-end
+#     @test norm(∇f(exactNewton(f,∇f, ∇²f, x₀))) ≈ 0 atol=0.001;
+#     @test norm(∇f_global(exactNewton(f_global,∇f_global, ∇²f_global, [1,2]))) ≈ 0 atol=0.001;
+# end
 
-@testset "quasiNewton" begin
-    f(x) = (x-2)^2-1;
-    ∇f(x) = 2(x-2);
-    x₀ = 1;
+# @testset "quasiNewton" begin
+#     f(x) = (x-2)^2-1;
+#     ∇f(x) = 2(x-2);
+#     x₀ = 1;
 
-    updateH(H,s,y) = H + (y*y')/(y'*s)-(H*s*s'*H)/(s'*H*s);
+#     updateH(H,s,y) = H + (y*y')/(y'*s)-(H*s*s'*H)/(s'*H*s);
     
-    # quasiNewton(f,∇f, x₀,H₀= Matrix{Float64}(I, length(x₀), length(x₀)), updateH=updateH)
-    @test ∇f(quasiNewton(f,∇f, x₀, H₀= 1, updateH = updateH, exportData = plotResults, fileName = "test")) ≈ 0 atol=0.001
-end
+#     # quasiNewton(f,∇f, x₀,H₀= Matrix{Float64}(I, length(x₀), length(x₀)), updateH=updateH)
+#     @test ∇f(quasiNewton(f,∇f, x₀, H₀= 1, updateH = updateH, exportData = plotResults, fileName = "test")) ≈ 0 atol=0.001
+# end
 
 
-@testset "BFGS" begin
-    f(x) = (x-2)^2-1;
+# @testset "BFGS" begin
+#     f(x) = (x-2)^2-1;
+#     ∇f(x) = 2(x-2);
+#     x₀ = 1;
+
+#     # quasiNewton(f,∇f, x₀,H₀= Matrix{Float64}(I, length(x₀), length(x₀)), updateH=updateH)
+#     @test ∇f(quasiNewtonBFGS(f,∇f, x₀, H₀= 1, exportData = plotResults, fileName = "test")) ≈ 0 atol=0.001
+#     @test norm(∇f_global(quasiNewtonBFGS(f_global,∇f_global, [1,2], H₀= [1 0;0 1], exportData = plotResults, fileName = "test"))) ≈ 0 atol=0.001
+# end
+
+# @testset "DFP" begin
+# f(x_old) = (x_old-2)^2-1;
+# ∇f(x) = 2(x-2);
+# x₀ = 1;
+
+# # quasiNewton(f,∇f, x₀,H₀= Matrix{Float64}(I, length(x₀), length(x₀)), updateH=updateH)
+#     @test ∇f(quasiNewtonDFP(f,∇f, x₀, H₀= 1, exportData = plotResults, fileName = "test")) ≈ 0 atol=0.001
+#     @test norm(∇f_global(quasiNewtonDFP(f_global,∇f_global, [1,2], H₀= [1 0;0 1], exportData = plotResults, fileName = "test"))) ≈ 0 atol=0.001
+# end
+
+@testset "generalCG" begin
+    f(x_old) = (x_old-2)^2-1;
     ∇f(x) = 2(x-2);
     x₀ = 1;
 
-    # quasiNewton(f,∇f, x₀,H₀= Matrix{Float64}(I, length(x₀), length(x₀)), updateH=updateH)
-    @test ∇f(quasiNewtonBFGS(f,∇f, x₀, H₀= 1, exportData = plotResults, fileName = "test")) ≈ 0 atol=0.001
-    @test norm(∇f_global(quasiNewtonBFGS(f_global,∇f_global, [1,2], H₀= [1 0;0 1], exportData = plotResults, fileName = "test"))) ≈ 0 atol=0.001
-end
+    updateβ(∇f_old,∇f_new) = norm(∇f_old)/norm(∇f_new);
 
-@testset "DFP" begin
-f(x) = (x-2)^2-1;
-∇f(x) = 2(x-2);
-x₀ = 1;
-
-# quasiNewton(f,∇f, x₀,H₀= Matrix{Float64}(I, length(x₀), length(x₀)), updateH=updateH)
-    @test ∇f(quasiNewtonDFP(f,∇f, x₀, H₀= 1, exportData = plotResults, fileName = "test")) ≈ 0 atol=0.001
-    @test norm(∇f_global(quasiNewtonDFP(f_global,∇f_global, [1,2], H₀= [1 0;0 1], exportData = plotResults, fileName = "test"))) ≈ 0 atol=0.001
+    @test ∇f(generalCG(f,∇f, x₀; updateα=Wolfe_Powell_rule, updateβ=updateβ)) ≈ 0 atol=0.001;
+    @test norm(∇f_global(generalCG(f_global,∇f_global, [1,2], updateα=Wolfe_Powell_rule, updateβ=updateβ, exportData = plotResults, fileName = "test"))) ≈ 0 atol=0.001
 end
