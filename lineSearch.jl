@@ -26,7 +26,7 @@ function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array}
         d ∈ Rⁿ
         β,σ ∈ (0,1) ⊂ R
         """
-        @debug "Before anything" ∇f_val,x,d,β,σ
+        # @debug "Before anything" ∇f_val,x,d,β,σ
         
         # making sure that the variables are within the bounds
         if β <= 0 || β >=1
@@ -36,7 +36,8 @@ function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array}
         end
         
         if  ∇f_val'*d >= 0
-            throw(ArgumentError("Arguments do NOT satisfy the condition: ∇f_val'*d < 0."))
+            # throw(ArgumentError("Arguments do NOT satisfy the condition: ∇f_val'*d < 0."))
+            @warn ("Arguments do NOT satisfy the condition: ∇f_val'*d < 0.")
         end
         
         
@@ -54,7 +55,7 @@ function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array}
     #     return Wolfe_Powell_rule(f,∇f,x,d, α₀=α₀, γ=γ, ρ=ρ, σ=σ);
     # end
 
-    function Wolfe_Powell_rule(f::Function, ∇f::Function, x::Union{Real,Vector, Array}, d::Union{Real, Vector, Array}; α₀::Real=1, γ::Real=2, ρ::Real=0.9, σ::Real=1e-4, ϵ::Real=1e-5)
+    function Wolfe_Powell_rule(f::Function, ∇f::Function, x::Union{Real,Vector, Array}, d::Union{Real, Vector, Array}; α₀::Real=1, γ::Real=2, ρ::Real=0.9, σ::Real=1e-4, ϵ::Real=1e-5, maxIterations::Int=convert(Int,1e5))
         
         if σ <= 0 || σ >= 0.5
             throw(ArgumentError("σ '$σ' should be in the range (0,1)"))
@@ -74,8 +75,9 @@ function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array}
 
     α = NaN;
 
-    if  ∇f(x)'*d >= 0
-        throw(ArgumentError("Arguments do NOT satisfy the condition: ∇f_val'*d < 0."))
+    if  ∇f(x)'*d >= -ϵ
+        # throw(ArgumentError("Arguments do NOT satisfy the condition: ∇f_val'*d < 0."))
+        @warn("Arguments do NOT satisfy the condition: ∇f_val'*d < 0.")
     end
 
     ϕ(α) = f(x+α*d);
@@ -90,26 +92,23 @@ function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array}
     αᵢ = α₀;
     i = 0;
 
-    @debug "Before entering the FIRST while loop" ϕ_dot₀
+    # @debug "Before entering the FIRST while loop" ϕ_dot₀
     
 
     while(true)
         
-        if ( ψ(αᵢ) >=0)
+        if ( ψ(αᵢ) >=-ϵ)
             a = 0;
             b = αᵢ;        
             break;
         elseif (ϕ_dot(αᵢ)>=ρ*ϕ_dot₀)
             α = αᵢ;
-            @debug "RETURN from first loop" α ϕ_dot(α) ψ(α) f(x+α*d)-σ*α*
+            @debug "RETURN from first loop" α ϕ_dot(α) ψ(α) f(x+α*d)-σ*α* 
             return α
         else
             αᵢ = γ*αᵢ;
         end
         
-        if i%100 == 0
-            @info i;
-        end
         
         i += 1;
     end
@@ -118,39 +117,40 @@ function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array}
     
     j = 0;
 
-    @debug "Before entering the SECOND while loop" ϕ_dot₀ α typeof(α) x d α₀
-    if (ψ(αᵢ) >=0)
-        while(j<1000)
+    # @debug "Before entering the SECOND while loop" ϕ_dot₀ α typeof(α) x d α₀
+    if (ψ(αᵢ) >= -ϵ)
+        while(j<maxIterations)
             αⱼ = aⱼ+(bⱼ-aⱼ)/2;   #B1
             
             
             if (ψ(αⱼ) >= 0)             
                 bⱼ = αⱼ;
-                @debug αⱼ aⱼ bⱼ j
+                j+=1;
+                # @debug αⱼ aⱼ bⱼ j ψ(αⱼ)
                 if αⱼ < ϵ
-                    @debug "ERRRORRR α < $ϵ" αⱼ aⱼ bⱼ j
+                    # @debug "ERRRORRR α < $ϵ" αⱼ aⱼ bⱼ j
                     break
                 end
 
                 continue; #go to B1
             elseif (ϕ_dot(αⱼ) >= ρ*ϕ_dot₀)
                 α = αⱼ;
-                @debug "Solution!" α
+                # @debug "Solution!" α
                 return α;     #STOP 2
             else #psi(tj)<0 and phi_dot(tj)< 0
                 aⱼ = αⱼ;
                 j = j+1;
-                @debug j
+                # @debug ψ(αⱼ) ϕ_dot(αⱼ) aⱼ j bⱼ ∇f(x)
                 continue; #go to B1
             end  
             
-            if j%100 == 0
-                @info j;
-            end
+            # if j%100 == 0
+            #     @info j;
+            # end
             j = j+1;
         end
-    else
-        @warn "Something doesn't seem right";
+    # else
+    #     # @warn "Something doesn't seem right";
     end
     
     
@@ -158,7 +158,8 @@ function armijoRule(f::Function,∇f_val::Union{Real,Array},x::Union{Real,Array}
     
     j = j+1;
     
-    @debug "Solution!" α
+    # @debug "Solution!" α
+
     return α;
     
 end
