@@ -17,6 +17,10 @@ This repository includes:
     4. Quasi-Newton methods. The `quasiNewton` method takes the Hessian update schemes (such as BFGS, DFP) as one of its arguments. This scheme is used in two other methods:
         1.  BFGS method. `quasiNewtonBFGS` method uses the general `quasiNewton` scheme. It uses the BFGS update.
         2.  DFP method. `quasiNewtonDFP` method uses the general `quasiNewton` scheme. It uses the DFP update.
+    5. Nonlinear Conjugate Gradient methods. The `generalCG` is a general CG scheme that takes the function `updateβ` as one of its arguments. The following CG methods use this scheme.
+        1. FR update. `cgFR` uses the `generalCG` scheme.
+        1. PR update. `cgPR` uses the `generalCG` scheme.
+        1. HS update. `cgHS` uses the `generalCG` scheme.
 
 3. Line search methods.
     1. Armijo rule. This is a backtracking approach.

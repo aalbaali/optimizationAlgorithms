@@ -327,7 +327,7 @@ function generalCG(f::Function,∇f::Function, x₀::Union{Real, Array, Vector};
         α = updateα(f,∇f,x_old,d);
         x_new = x_old + α*d;
         ∇f_new = ∇f(x_new);
-        β = updateβ(∇f_old,∇f_new);
+        β = updateβ(∇f_old,∇f_new,d);
         d = -∇f_new+β*d;
         
         x_old = x_new;
@@ -364,15 +364,28 @@ function generalCG(f::Function,∇f::Function, x₀::Union{Real, Array, Vector};
 
 end
 
-function cgFR()
+function cgFR(f::Function,∇f::Function, x₀::Union{Real, Array, Vector}; updateα::Union{Nothing,Real,Function}=Wolfe_Powell_rule, d₀::Union{Real,Array}=-∇f(x₀), ϵ::AbstractFloat= 1e-5, maxIterations::Real=1e6, exportData::Bool = false,fileName::String="", fileDir::String="")
     """Fletcher-Reeves method. Uses the general conjugate gradient scheme (generalCG)"""
+    updateβ(∇f_old,∇f_new,d_old=nothing) = (∇f_old'*∇f_old)/(∇f_new'*∇f_new);
+    fileName = "cgFR_"*fileName;
+    ans =  generalCG(f,∇f, x₀; updateα=updateα, updateβ=updateβ, d₀=d₀, ϵ=ϵ, maxIterations=maxIterations, exportData=exportData,fileName=fileName, fileDir= fileDir)    
+    return ans;
 end
 
-function cgHS()
-    """ Hestenes-Stiefel method. Uses the general conjugate gradient scheme (generalCG)"""
-end
 
-function cgPR()
+function cgPR(f::Function,∇f::Function, x₀::Union{Real, Array, Vector}; updateα::Union{Nothing,Real,Function}=Wolfe_Powell_rule, d₀::Union{Real,Array}=-∇f(x₀), ϵ::AbstractFloat= 1e-5, maxIterations::Real=1e6, exportData::Bool = false,fileName::String="", fileDir::String="")
     """ Polak-Rebiere method. Uses the general conjugate gradient scheme (generalCG)"""
+    updateβ(∇f_old,∇f_new, d_old=nothing) = (∇f_new'*(∇f_new-∇f_old))/(∇f_old'*∇f_old);
+    fileName = "cgPR_"*fileName;
+    ans =  generalCG(f,∇f, x₀; updateα=updateα, updateβ=updateβ, d₀=d₀, ϵ=ϵ, maxIterations=maxIterations, exportData=exportData,fileName=fileName, fileDir= fileDir)    
+    return ans;
+end
+
+function cgHS(f::Function,∇f::Function, x₀::Union{Real, Array, Vector}; updateα::Union{Nothing,Real,Function}=Wolfe_Powell_rule, d₀::Union{Real,Array}=-∇f(x₀), ϵ::AbstractFloat= 1e-5, maxIterations::Real=1e6, exportData::Bool = false,fileName::String="", fileDir::String="")
+    """ Hestenes-Stiefel method. Uses the general conjugate gradient scheme (generalCG)"""
+    updateβ(∇f_old,∇f_new, d_old) = (∇f_new'*(∇f_new-∇f_old))/((∇f_new-∇f_old)'*d_old);
+    fileName = "cgHS_"*fileName;
+    ans =  generalCG(f,∇f, x₀; updateα=updateα, updateβ=updateβ, d₀=d₀, ϵ=ϵ, maxIterations=maxIterations, exportData=exportData,fileName=fileName, fileDir= fileDir)    
+    return ans;
 end
 
